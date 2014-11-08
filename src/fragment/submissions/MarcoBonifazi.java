@@ -2,48 +2,51 @@ package fragment.submissions;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
 
 public class MarcoBonifazi {
-	private String fragment_;
-	
+
 	public class Trie {
 		private HashMap<Character, Trie> children_;
 		private HashSet<Integer> stringIds_;
 		private Character char_;
-		
-		public Trie(Character ch, int stringId) {
+
+		private void init() {
 			stringIds_ = new HashSet<Integer>();
-			char_ = ch;
-			stringIds_.add(stringId);
 			children_ = new HashMap<Character, Trie>();
 		}
-		
-		public Set<Integer> getStringIds() {
-			return stringIds_;
+		public Trie(Character ch, int stringId) {
+			init();
+			char_ = ch;
+			stringIds_.add(stringId);
 		}
+
+		public Trie() {
+			init();
+		}
+
+		private int getStringIdsSize() {
+			return stringIds_.size();
+		}
+
+		public void copyStringIds(Set<Integer> set) {
+			set.addAll(stringIds_);
+		}
+
 		public boolean isMyString(int stringId) {
 			return stringIds_.contains(stringId);
 		}
-		
-		public Trie() {
-			stringIds_ = new HashSet<Integer>();
-			children_ = new HashMap<Character, Trie>();
-		}
-		
+
 		private Trie searchChild(Character ch) {
 			return children_.get(ch);
 		}
-		
-		private Trie searchChildNotString2(Character ch, int stringId) {
+
+		private Trie searchChildNotStringEnding(Character ch, int stringId) {
 			Trie trie = children_.get(ch);
 
 			if (trie != null) {
@@ -59,14 +62,13 @@ public class MarcoBonifazi {
 			}
 		}
 
-		
 		private Trie searchChildNotString(Character ch, int stringId) {
 			Trie trie = children_.get(ch);
 
 			if (trie != null) {
 				boolean isSameString = trie.isMyString(stringId);
-				
-				if (!isSameString || trie.getStringIds().size() > 1) {
+
+				if (!isSameString || trie.getStringIdsSize() > 1) {
 					return trie;
 				} else {
 					return null;
@@ -76,7 +78,7 @@ public class MarcoBonifazi {
 			}
 		}
 
-		private void replaceChild(int oldStringId, int newStringId) {
+		private void replaceStringId(int oldStringId, int newStringId) {
 			stringIds_.remove(oldStringId);
 			stringIds_.add(newStringId);
 		}
@@ -85,7 +87,7 @@ public class MarcoBonifazi {
 			Character ch = child.getChar();
 			children_.put(ch, child);
 		}
-		
+
 		private Character getChar() {
 			return char_;
 		}
@@ -104,28 +106,31 @@ public class MarcoBonifazi {
 		public void removeChildWithChar(char c) {
 			children_.remove(c);
 		}
+		public Set<Integer> getStringIds() {
+			return stringIds_;
+		}
 	}
 
 	private int searchLongestPrefix(Trie mainTrie, String string, int stringId, Set<Integer> b) {
 		int stringLen = string.length() - 1;
-		
+
 		int i = 0;
 		int depth = 0;
-		Trie temp = null;
+		Trie endTrie = null;
 		Trie currentTrie = mainTrie;
-		
+
 		while (i <= stringLen) {
 			Character c = string.charAt(i);
 			Trie child = currentTrie.searchChildNotString(c, stringId);
-			
-			temp = currentTrie.searchChildNotString2('\0', stringId);
+
+			endTrie = currentTrie.searchChildNotStringEnding('\0', stringId);
 			//System.out.println("C " +currentTrie.getStringIds());
-			if (temp != null) {
+			if (endTrie != null) {
 				depth = i;
 				b.clear();
-				b.addAll(temp.getStringIds());
+				endTrie.copyStringIds(b);
 			}
-			
+
 			if (child == null) {
 				break;
 			} else {
@@ -133,21 +138,18 @@ public class MarcoBonifazi {
 				i++;
 			}
 		}
-		
+
 		if (i > stringLen) {
 			depth = i;
 			if (currentTrie != null) {
 				b.clear();
-				b.addAll(currentTrie.getStringIds());
+				currentTrie.copyStringIds(b);
 			}
 		}
-	
 		return depth;
-
 	}
 
-	private void addSuffixInTrie(Trie currentTrie, String string, int stringId) {
-		//System.out.println("W " +string.length() + " " + string);
+	private void addWordInSuffixTrie(Trie currentTrie, String string, int stringId) {
 
 		if (string.length() == 0) {
 			Trie child = new Trie('\0', stringId);
@@ -156,44 +158,40 @@ public class MarcoBonifazi {
 			Character c = string.charAt(0);
 			Trie child = new Trie(c, stringId);
 			currentTrie.addChild(child);
-			addSuffixInTrie(child, string.substring(1), stringId);
-		}
-	}
-	
-	private void replaceStringsId(Trie mainTrie, String string, int oldStringId, int newStringId) {
-		for (int len = string.length() - 1; len >= 0; len --) {
-			replaceFragmentInSuffixTrie(mainTrie, string.substring(len), oldStringId, newStringId);
-		}
-	}
-	
-	private void replaceEndingStringsId(Trie mainTrie, String string, String stringToAdd, int stringId) {
-		for (int len = string.length() - 1; len >= 0; len --) {
-			searchEndingElement(mainTrie, string.substring(len), stringId, stringToAdd);
+			addWordInSuffixTrie(child, string.substring(1), stringId);
 		}
 	}
 
-	
 	private void searchEndingElement(Trie mainTrie, String stringToScan,
 			int stringId, String stringToAdd) {
 		Trie trie = mainTrie.searchChild('\0');
-		
+
 		if (trie != null) {
+			System.out.println("CIAOO");
+
 			if (trie.isMyString(stringId)) {
-				if (trie.getStringIds().size() > 1) {
+				if (trie.getStringIdsSize() >= 1) {
 					trie.removeStringId(stringId);
+					System.out.println("CIAOO");
 				} else {
 					mainTrie.removeChildWithChar('\0');
 				}
-				addSuffixInTrie(mainTrie, stringToAdd, stringId);
+				addWordInSuffixTrie(mainTrie, stringToAdd, stringId);
 			}
 		} else {
-			for (Trie child : mainTrie.getChildren().values()) {
-				searchEndingElement(child, stringToScan.substring(1), stringId, stringToAdd);
+			//System.out.println("CIAOO");
+
+			if (stringToScan.length() > 0) {
+				//System.out.println(mainTrie.getChar());
+				for (Trie child : mainTrie.getChildren().values()) {
+					searchEndingElement(child, stringToScan.substring(1), stringId, stringToAdd);
+				}
 			}
 		}
 	}
 
 	private void replaceFragmentInSuffixTrie(Trie mainTrie, String string, int oldStringId, int newStringId) {
+
 		if (string.length() >= 0) {
 			Character c;
 			if (string.length() == 0) {
@@ -202,22 +200,25 @@ public class MarcoBonifazi {
 				c = string.charAt(0);
 			}
 			Trie child = mainTrie.searchChild(c);
+			//System.out.println(mainTrie.getStringIds() + " " + oldStringId + " " + newStringId);
+
+			mainTrie.replaceStringId(oldStringId, newStringId);
 
 			if (child == null) {
-				mainTrie.replaceChild(oldStringId, newStringId);
 			} else {
-				mainTrie.replaceChild(oldStringId, newStringId);
-				
+
 				if (string.length() != 0) {
 					replaceFragmentInSuffixTrie(child, string.substring(1),  oldStringId, newStringId);
+				} else {
+					child.replaceStringId(oldStringId, newStringId);
 				}
 			}
 		}
 	}
 
-	
+
 	private void addFragmentInSuffixTrie(Trie mainTrie, String string, int stringId) {
-		
+
 		if (string.length() >= 0) {
 			Character c;
 			if (string.length() == 0) {
@@ -228,17 +229,17 @@ public class MarcoBonifazi {
 			Trie child = mainTrie.searchChild(c);
 
 			if (child == null) {
-				addSuffixInTrie(mainTrie, string, stringId);
+				addWordInSuffixTrie(mainTrie, string, stringId);
 			} else {
 				child.addStringId(stringId);
-				
+
 				if (string.length() != 0) {
 					addFragmentInSuffixTrie(child, string.substring(1), stringId);
 				}
 			}
 		}
 	}
-	
+
 	public void printTrie(Trie mainTrie, int level) {
 		for (Entry<Character, Trie> tr : mainTrie.children_.entrySet()) {
 			Character c = tr.getKey();
@@ -253,94 +254,90 @@ public class MarcoBonifazi {
 			}
 			printTrie(t, level+1);
 		} 
-		
-	}
-	
-	public void run() {
 
-		String[] parts = fragment_.split(";");//{"bamama", "am", "amara", "caba"};//fragment_.split(";");//
+	}
+
+	public void initTrie(String fragment, Trie mainTrie, Map<Integer, String> mapString) {
+		String[] parts = {"marco", "marco", "rco", "rcobonifazi", "olemarcobonifaziole"};//fragment.split(";");
 		int i = 0;
 
-		//String[] parts = {"ciao"};
-		Map<Integer, String> mapString = new TreeMap<Integer, String>();
 		for (String s : parts) {
 			mapString.put(i,  s);
 			i++;
 		}
+		
+		for (Entry<Integer, String> entry : mapString.entrySet()) {
+			int ir = entry.getKey();
+			String s = entry.getValue();
+			//System.out.println("words:" + s);
 
-		int re = 0;
-		while (true) {
-			Trie mainTrie = new Trie();
-
-			for (Entry<Integer, String> entry : mapString.entrySet()) {
-				int ir = entry.getKey();
-				String s = entry.getValue();
-				//System.out.println("words:" + s);
-
-				for (int len = s.length() - 1; len >= 0; len --) {
-					//System.out.println("words:" + s.substring(len));
-					addFragmentInSuffixTrie(mainTrie, s.substring(len), ir);
-				}
+			for (int len = s.length() - 1; len >= 0; len --) {
+				//System.out.println("words:" + s.substring(len));
+				addFragmentInSuffixTrie(mainTrie, s.substring(len), ir);
 			}
-			//printTrie(mainTrie, 0);
-
+		}
+	}
+	
+	public String run(String fragment) {
+		Trie mainTrie = new Trie();
+		Map<Integer, String> mapString = new HashMap<Integer, String>();
+		
+		initTrie(fragment, mainTrie, mapString);
+		
+		while (mapString.size() > 1) {
 			int maxStringId = -1;
 			int maxLen = 0;
-			HashSet<Integer> finalSet = new HashSet<Integer>();
+			Set<Integer> finalSet = null;
 
 			for (Entry<Integer, String> entry : mapString.entrySet()) {
-				int ir = entry.getKey();
-				String s = entry.getValue();
-				HashSet<Integer> b = new HashSet<Integer>();
-				int lenSuf = searchLongestPrefix(mainTrie, s, ir, b);
-				System.out.println(ir + " " + s + " " + lenSuf + " " + b); 
+				int stringId = entry.getKey();
+				String string = entry.getValue();
+				Set<Integer> setStringIds = new HashSet<Integer>();
+				int lenSuf = searchLongestPrefix(mainTrie, string, stringId, setStringIds);
 
 				if (lenSuf > maxLen) {
-					maxStringId = ir;
+					maxStringId = stringId;
 					maxLen = lenSuf;
-					finalSet.clear();
-					finalSet.addAll(b);
+					finalSet = setStringIds;
 				}
-				i++;
 			}
 			if (maxStringId == -1) {
 				break;
 			}
 			Iterator<Integer> it = finalSet.iterator();
 			int stringIdWithGoodSuffix = it.next();
-			System.out.println("stringIdWithGoodSuffix: " + stringIdWithGoodSuffix);
 
 			if (stringIdWithGoodSuffix == maxStringId) {
-				stringIdWithGoodSuffix = it.next();//(stringIdWithGoodSuffix+ 1);
-				System.out.println("stringIdWithGoodSuffix: " + stringIdWithGoodSuffix);
-
+				stringIdWithGoodSuffix = it.next();
 			}
-			String finalString = mapString.get(stringIdWithGoodSuffix) + mapString.get(maxStringId).substring(maxLen);
-			System.out.println("Max: " + "id:" +  maxStringId + " len:" + maxLen + " " + "replId:"+ stringIdWithGoodSuffix + " " + finalString); 
+
+			String toRemoveString = mapString.get(maxStringId);
+			String toAddString = toRemoveString.substring(maxLen);
+			String toAppendString = mapString.get(stringIdWithGoodSuffix);
+			String finalString = toAppendString + toAddString;
 
 			mapString.remove(maxStringId);
 			mapString.put(stringIdWithGoodSuffix, finalString);
-			re++;
-		}
-		for (Entry<Integer, String> entry : mapString.entrySet()) {
-			int ir = entry.getKey();
-			String s = entry.getValue();
-			System.out.println("R: " +s); 
 
-		}
+			for (int len = toRemoveString.length() ; len >= 0; len --) {
+				replaceFragmentInSuffixTrie(mainTrie, toRemoveString.substring(len), maxStringId, stringIdWithGoodSuffix);
+			}
 
+			if (toAddString.length() > 0) {
+				searchEndingElement(mainTrie, toAppendString.substring(toAppendString.length()), stringIdWithGoodSuffix, toAddString);
+			}
+		}
+		if (mapString.size() == 0) {
+			return "Error";
+		} else {
+			return mapString.values().iterator().next();
+		}
 	}
-	
-	public MarcoBonifazi(String fragment) {
-		fragment_ = fragment;
-	};
 
 	static String reassemble(String fragment) {
-		MarcoBonifazi mb = new MarcoBonifazi(fragment);
-		mb.run();
-		return "";
+		MarcoBonifazi mb = new MarcoBonifazi();
+		return mb.run(fragment);
 	}
-
 
 	public static void main(String[] args) { 
 
@@ -349,12 +346,10 @@ public class MarcoBonifazi {
 			String fragmentProblem; 
 
 			while ((fragmentProblem = in.readLine()) != null) { 
-				System.out.println(reassemble(fragmentProblem)); 
+				System.out.println(reassemble(fragmentProblem));
 			} 
 		} catch (Exception e) { 
 			e.printStackTrace(); 
 		}
 	}
 }
-
-
