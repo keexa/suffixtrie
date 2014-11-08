@@ -50,7 +50,8 @@ public class MarcoBonifazi {
 			Trie trie = children_.get(ch);
 
 			if (trie != null) {
-				boolean isSameString = trie.isMyString(stringId);
+				//System.out.println(trie.stringIds_ + " " + stringId);
+				boolean isSameString = false;//trie.isMyString(stringId);
 
 				if (!isSameString) {
 					return trie;
@@ -66,9 +67,9 @@ public class MarcoBonifazi {
 			Trie trie = children_.get(ch);
 
 			if (trie != null) {
-				boolean isSameString = trie.isMyString(stringId);
+				//boolean isSameString = trie.isMyString(stringId);
 
-				if (!isSameString || trie.getStringIdsSize() > 1) {
+				if (trie.getStringIdsSize() > 1) {// && !isSameString) {
 					return trie;
 				} else {
 					return null;
@@ -167,12 +168,12 @@ public class MarcoBonifazi {
 		Trie trie = mainTrie.searchChild('\0');
 
 		if (trie != null) {
-			System.out.println("CIAOO");
+			//System.out.println("CIAOO");
 
 			if (trie.isMyString(stringId)) {
 				if (trie.getStringIdsSize() >= 1) {
 					trie.removeStringId(stringId);
-					System.out.println("CIAOO");
+				//	System.out.println("CIAOO");
 				} else {
 					mainTrie.removeChildWithChar('\0');
 				}
@@ -216,7 +217,6 @@ public class MarcoBonifazi {
 		}
 	}
 
-
 	private void addFragmentInSuffixTrie(Trie mainTrie, String string, int stringId) {
 
 		if (string.length() >= 0) {
@@ -258,7 +258,7 @@ public class MarcoBonifazi {
 	}
 
 	public void initTrie(String fragment, Trie mainTrie, Map<Integer, String> mapString) {
-		String[] parts = {"marco", "marco", "rco", "rcobonifazi", "olemarcobonifaziole"};//fragment.split(";");
+		String[] parts = fragment.split(";");//{"marco", "cob", "bonifazi", "olemarcobonifaziole"};//fragment.split(";");//
 		int i = 0;
 
 		for (String s : parts) {
@@ -323,11 +323,12 @@ public class MarcoBonifazi {
 				replaceFragmentInSuffixTrie(mainTrie, toRemoveString.substring(len), maxStringId, stringIdWithGoodSuffix);
 			}
 
-			if (toAddString.length() > 0) {
-				searchEndingElement(mainTrie, toAppendString.substring(toAppendString.length()), stringIdWithGoodSuffix, toAddString);
-			}
+			//if (toAddString.length() > 0) {
+			//	searchEndingElement(mainTrie, toAppendString.substring(toAppendString.length()), stringIdWithGoodSuffix, toAddString);
+			//}
 		}
-		if (mapString.size() == 0) {
+
+		if (mapString.size() == 0 || mapString.size() > 1) {
 			return "Error";
 		} else {
 			return mapString.values().iterator().next();
