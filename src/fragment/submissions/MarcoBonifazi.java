@@ -50,8 +50,8 @@ public class MarcoBonifazi {
 			Trie trie = children_.get(ch);
 
 			if (trie != null) {
-				//System.out.println(trie.stringIds_ + " " + stringId);
-				boolean isSameString = false;//trie.isMyString(stringId);
+				boolean isSameString = trie.isMyString(stringId);
+				//System.out.println(trie.stringIds_ + " " + stringId + " " + isSameString);
 
 				if (!isSameString) {
 					return trie;
@@ -150,7 +150,7 @@ public class MarcoBonifazi {
 		return depth;
 	}
 
-	private void addWordInSuffixTrie(Trie currentTrie, String string, int stringId) {
+	private void addBranchInSuffixTrie(Trie currentTrie, String string, int stringId) {
 
 		if (string.length() == 0) {
 			Trie child = new Trie('\0', stringId);
@@ -159,83 +159,47 @@ public class MarcoBonifazi {
 			Character c = string.charAt(0);
 			Trie child = new Trie(c, stringId);
 			currentTrie.addChild(child);
-			addWordInSuffixTrie(child, string.substring(1), stringId);
+			addBranchInSuffixTrie(child, string.substring(1), stringId);
 		}
 	}
 
-	private void searchEndingElement(Trie mainTrie, String stringToScan,
-			int stringId, String stringToAdd) {
-		Trie trie = mainTrie.searchChild('\0');
+	private void replaceStringIdInSuffixTrie(Trie mainTrie, String string, int oldStringId, int newStringId) {
+		Character c;
 
-		if (trie != null) {
-			//System.out.println("CIAOO");
-
-			if (trie.isMyString(stringId)) {
-				if (trie.getStringIdsSize() >= 1) {
-					trie.removeStringId(stringId);
-				//	System.out.println("CIAOO");
-				} else {
-					mainTrie.removeChildWithChar('\0');
-				}
-				addWordInSuffixTrie(mainTrie, stringToAdd, stringId);
-			}
+		if (string.length() == 0) {
+			c = '\0';
 		} else {
-			//System.out.println("CIAOO");
+			c = string.charAt(0);
+		}
+		mainTrie.replaceStringId(oldStringId, newStringId);
+		Trie child = mainTrie.searchChild(c);
 
-			if (stringToScan.length() > 0) {
-				//System.out.println(mainTrie.getChar());
-				for (Trie child : mainTrie.getChildren().values()) {
-					searchEndingElement(child, stringToScan.substring(1), stringId, stringToAdd);
-				}
+		if (child != null) {
+
+			if (c != '\0') {//string.length() != 0) {
+				replaceStringIdInSuffixTrie(child, string.substring(1),  oldStringId, newStringId);
+			} else {
+				child.replaceStringId(oldStringId, newStringId);
 			}
 		}
 	}
 
-	private void replaceFragmentInSuffixTrie(Trie mainTrie, String string, int oldStringId, int newStringId) {
-
-		if (string.length() >= 0) {
-			Character c;
-			if (string.length() == 0) {
-				c = '\0';
-			} else {
-				c = string.charAt(0);
-			}
-			Trie child = mainTrie.searchChild(c);
-			//System.out.println(mainTrie.getStringIds() + " " + oldStringId + " " + newStringId);
-
-			mainTrie.replaceStringId(oldStringId, newStringId);
-
-			if (child == null) {
-			} else {
-
-				if (string.length() != 0) {
-					replaceFragmentInSuffixTrie(child, string.substring(1),  oldStringId, newStringId);
-				} else {
-					child.replaceStringId(oldStringId, newStringId);
-				}
-			}
+	private void addStringInSuffixTrie(Trie mainTrie, String string, int stringId) {
+		Character c;
+		if (string.length() == 0) {
+			c = '\0';
+		} else {
+			c = string.charAt(0);
 		}
-	}
+		Trie child = mainTrie.searchChild(c);
 
-	private void addFragmentInSuffixTrie(Trie mainTrie, String string, int stringId) {
+		if (child == null) {
+			addBranchInSuffixTrie(mainTrie, string, stringId);
+		} else {
+			child.addStringId(stringId);
 
-		if (string.length() >= 0) {
-			Character c;
-			if (string.length() == 0) {
-				c = '\0';
-			} else {
-				c = string.charAt(0);
-			}
-			Trie child = mainTrie.searchChild(c);
-
-			if (child == null) {
-				addWordInSuffixTrie(mainTrie, string, stringId);
-			} else {
-				child.addStringId(stringId);
-
-				if (string.length() != 0) {
-					addFragmentInSuffixTrie(child, string.substring(1), stringId);
-				}
+			if (string.length() != 0) {
+				addStringInSuffixTrie(child, string.substring(1), stringId);
 			}
 		}
 	}
@@ -253,37 +217,33 @@ public class MarcoBonifazi {
 				System.out.println(spacing + c + t.getStringIds());
 			}
 			printTrie(t, level+1);
-		} 
-
+		}
 	}
 
 	public void initTrie(String fragment, Trie mainTrie, Map<Integer, String> mapString) {
-		String[] parts = fragment.split(";");//{"marco", "cob", "bonifazi", "olemarcobonifaziole"};//fragment.split(";");//
+		String[] parts = fragment.split(";");
 		int i = 0;
 
 		for (String s : parts) {
-			mapString.put(i,  s);
+			mapString.put(i++,  s);
 			i++;
 		}
-		
+
 		for (Entry<Integer, String> entry : mapString.entrySet()) {
-			int ir = entry.getKey();
 			String s = entry.getValue();
-			//System.out.println("words:" + s);
 
 			for (int len = s.length() - 1; len >= 0; len --) {
-				//System.out.println("words:" + s.substring(len));
-				addFragmentInSuffixTrie(mainTrie, s.substring(len), ir);
+				addStringInSuffixTrie(mainTrie, s.substring(len), entry.getKey());
 			}
 		}
 	}
-	
+
 	public String run(String fragment) {
 		Trie mainTrie = new Trie();
 		Map<Integer, String> mapString = new HashMap<Integer, String>();
-		
+
 		initTrie(fragment, mainTrie, mapString);
-		
+
 		while (mapString.size() > 1) {
 			int maxStringId = -1;
 			int maxLen = 0;
@@ -315,17 +275,18 @@ public class MarcoBonifazi {
 			String toAddString = toRemoveString.substring(maxLen);
 			String toAppendString = mapString.get(stringIdWithGoodSuffix);
 			String finalString = toAppendString + toAddString;
+			//System.out.println(maxLen);
+			//System.out.println("toRemoveString " + toRemoveString);
+			//System.out.println("toAddString " + toAddString);
+			//System.out.println("toAppendString " + toAppendString);
+			//System.out.println("finalString " + finalString);
 
 			mapString.remove(maxStringId);
 			mapString.put(stringIdWithGoodSuffix, finalString);
 
-			for (int len = toRemoveString.length() ; len >= 0; len --) {
-				replaceFragmentInSuffixTrie(mainTrie, toRemoveString.substring(len), maxStringId, stringIdWithGoodSuffix);
+			for (int len = toRemoveString.length() - 1 ; len >= 0; len --) {
+				replaceStringIdInSuffixTrie(mainTrie, toRemoveString.substring(len), maxStringId, stringIdWithGoodSuffix);
 			}
-
-			//if (toAddString.length() > 0) {
-			//	searchEndingElement(mainTrie, toAppendString.substring(toAppendString.length()), stringIdWithGoodSuffix, toAddString);
-			//}
 		}
 
 		if (mapString.size() == 0 || mapString.size() > 1) {
@@ -342,8 +303,7 @@ public class MarcoBonifazi {
 
 	public static void main(String[] args) { 
 
-		try (BufferedReader in = new BufferedReader(new FileReader(args[0]))) { 
-
+		try (BufferedReader in = new BufferedReader(new FileReader(args[0]))) {
 			String fragmentProblem; 
 
 			while ((fragmentProblem = in.readLine()) != null) { 
