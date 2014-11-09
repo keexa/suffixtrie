@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-public class MarcoBonifazi {
+public class Keexa {
 
 	public class Trie {
 		private HashMap<Character, Trie> children_;
@@ -297,7 +297,7 @@ public class MarcoBonifazi {
 	}
 
 	static String reassemble(String fragment) {
-		MarcoBonifazi mb = new MarcoBonifazi();
+		Keexa mb = new Keexa();
 		return mb.run(fragment);
 	}
 
